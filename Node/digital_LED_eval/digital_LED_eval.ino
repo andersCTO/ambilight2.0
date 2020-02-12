@@ -20,7 +20,7 @@
 
 //Network Setup
 const char * networkName = "Kingscross24";
-const char * networkPswd = "grisensmamma";
+const char * networkPswd = "";
 const int ipPort = 1234;    
 boolean connected = false;
 WiFiUDP udp;
