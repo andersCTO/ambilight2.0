@@ -19,7 +19,7 @@
 #endif
 
 //Network Setup
-const char * networkName = "Kingscross24";
+const char * networkName = "";
 const char * networkPswd = "";
 const int ipPort = 1234;    
 boolean connected = false;
