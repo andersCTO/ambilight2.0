@@ -69,8 +69,8 @@ int manager_udp_setup(int port)
 	} while (*sock_p < 0);
 	cout << "Manager UDP Setup\tSocket Created\r\n";
 	
-	//Setup addr
-	memset((char *) &Manager, 0, sizeof(slen));
+        //Setup addr
+        memset((char *) &Manager, 0, sizeof(Manager));
 	Manager.sin_family = AF_INET;
 	Manager.sin_port = htons(port);
 	Manager.sin_addr.s_addr = htonl(INADDR_ANY);

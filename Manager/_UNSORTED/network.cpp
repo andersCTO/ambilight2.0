@@ -39,19 +39,19 @@ int manager_network_setup(int port)
 
 int recieve_node_setup(int sock, struct sockaddr_in *node_addr )
 {
-	
-	int ret, led_count=0,slen = sizeof(*node_addr);	
-	recvfrom(sock, (char*)&led_count, 2, MSG_WAITALL, (struct sockaddr*)node_addr, (socklen_t*)&slen);	
-	if (ret < 0)
-	{
-		return -1;
-	}
-	else
-	{
-		cout << "Connection Handler\tGot setup from: " << inet_ntoa(node_addr->sin_addr) << '@' << ntohs(node_addr->sin_port) << "\r\n";
-		return led_count;
-	}
-		
+
+        int ret, led_count=0,slen = sizeof(*node_addr);
+        ret = recvfrom(sock, (char*)&led_count, 2, MSG_WAITALL, (struct sockaddr*)node_addr, (socklen_t*)&slen);
+        if (ret < 0)
+        {
+                return -1;
+        }
+        else
+        {
+                cout << "Connection Handler\tGot setup from: " << inet_ntoa(node_addr->sin_addr) << '@' << ntohs(node_addr->sin_port) << "\r\n";
+                return led_count;
+        }
+
 }
 
 int node_setup_done(int sock, struct sockaddr_in node_addr)
