@@ -97,7 +97,17 @@ void *ledpi_com(void*argu)
 	
 	//Get Config
 	
-	read(local_argu->ip_socket, config_buffer, sizeof(config_buffer));
+ssize_t nBytes; // For config_buffer read
+nBytes = read(local_argu->ip_socket, config_buffer, sizeof(config_buffer) - 1);
+if (nBytes >= 0) {
+config_buffer[nBytes] = '\0'; // Null-terminate the buffer
+} else {
+// Handle read error, perhaps log it or close connection
+perror("Failed to read config_buffer");
+// Depending on desired behavior, might need to skip config_demod or return
+// For now, just null-terminate at beginning if read failed, to avoid passing garbage
+config_buffer[0] = '\0';
+}
 	printf("\nLED Pi\t\tRecieved Config:");
 	config_demod(configuration, config_buffer);
 	printf("\nLED Pi\t\t LED config:");
@@ -121,7 +131,7 @@ void *ledpi_com(void*argu)
 	char *temp_arr = malloc(RGB_width);
 	char *color_recv = malloc(Image_width * 3);
 	char A;
-	int nBytes, j, sent_count = 0;
+int nBytes, j, sent_count = 0;
 	while (1)
 	{
 		for (j = 0; j < MAX_CONFIGS_PER_CLIENT; j++)
@@ -161,6 +171,11 @@ void *ledpi_com(void*argu)
 			printf("\nLED Pi Task\t\t Image written to Client task");	
 		}
 		read(local_argu->ip_socket, &A, 1);
+// TODO: Implement proper cleanup (e.g., signal handling) for thread termination as this loop is infinite.
+free(color_arr); // Added tab for indentation
+free(temp_arr); // Added tab for indentation
+free(color_recv); // Added tab for indentation
+free(local_argu); // Added tab for indentation
 		
 	}
 }
@@ -230,6 +245,11 @@ void *grab_task()
 	
 	//UTV007 Descriptor
 	FILE * UTV007 = fopen(UTV007_DIR, "rb");
+if (UTV007 == NULL) {
+fprintf(stderr, "Error opening UTV007 device in grab_task
+return NULL;
+}
+");
 	
 	
 	int timer = 0, nr_of_active_clients = 0;
@@ -344,6 +364,23 @@ void *grab_task()
 		timer++;
 		usleep(1000 * 500);
 		printf("\nGrab Task\t\t Frame Number: %i", capture_count++);
+// TODO: Implement proper cleanup (e.g., signal handling) for thread termination as this loop is infinite.
+if (UTV007 != NULL) fclose(UTV007);
+if (socket != -1) close(socket); // Domain socket for grab_task
+// Free client sockets stored in list_of_clients
+for (int k_idx = 0; k_idx < nr_of_active_clients; k_idx++) {
+if (list_of_clients[k_idx].socket_id != -1 && list_of_clients[k_idx].socket_id != 0) {
+close(list_of_clients[k_idx].socket_id);
+}
+}
+free(client_sockets);
+free(list_of_clients);
+free(left_vertical);
+free(right_vertical);
+free(top_horizontal);
+free(bottom_horizontal);
+free(buffer);
+}
 	}
 	
 	
@@ -371,7 +408,7 @@ void *conn_handler()
 	
 	
 	//UNIX DOMAIN SETUP
-	char **socket_array = malloc(sizeof(char**));
+char **socket_array = NULL; // Initialize to NULL
 	
 	srand(time(NULL));
 	
@@ -399,7 +436,7 @@ void *conn_handler()
 		printf("\nConn Handler\tDomain Sockname |%s|", socket_array[active_clients]);
 		
 		pthread_t client_thread;
-		new_ip_sock = malloc(1);
+new_ip_sock = malloc(sizeof(int)); // Corrected malloc size
 		*new_ip_sock = new_ip_socket;
 		
 		
@@ -411,13 +448,29 @@ void *conn_handler()
 		if (pthread_create(&client_thread, NULL, ledpi_com, (void*)argu) < 0)
 		{
 			perror("could not create thread");
+free(argu); // Free argu if thread creation failed
+free(new_ip_sock); // Also free new_ip_sock if thread creation failed
 			return 1;
 		}
+free(new_ip_sock); // Freed as its value is now managed by the thread via argu
 		printf("\nConn Handler\tClient Thread Created");
 		active_clients++;
 		printf("\nConn Handler\tActive Clients: %i", active_clients);
 		sleep(1);
 	}
+// TODO: Implement proper cleanup (e.g., signal handling) for thread termination as this loop is infinite, or if accept fails.
+// Free the array of socket names
+if (socket_array != NULL) {
+for (int i = 0; i < active_clients; i++) {
+free(socket_array[i]);
+}
+free(socket_array);
+}
+// Close listening sockets
+if (main_socket != -1) close(main_socket);
+if (ip_socket != -1) close(ip_socket);
+if (ip_socket != -1) close(ip_socket);
+// Close listening sockets
 }
 
 //Catch Ctrl+c
@@ -516,9 +569,22 @@ int main()
 	pthread_t grab_thread, handler_thread;
 	
 	//Start Threads
-	pthread_create(&grab_thread, NULL, grab_task,NULL);
+int grab_ret = pthread_create(&grab_thread, NULL, grab_task,NULL);
+if (grab_ret != 0) {
+fprintf(stderr, "Error creating grab_thread: %s
+return 1;
+}
+", strerror(grab_ret));
 	sleep(1);
-	pthread_create(&handler_thread, NULL, conn_handler,NULL);
+int handler_ret = pthread_create(&handler_thread, NULL, conn_handler,NULL);
+if (handler_ret != 0) {
+fprintf(stderr, "Error creating handler_thread: %s
+// Optional: Consider cleanup for grab_thread if handler_thread fails, e.g.:
+// pthread_cancel(grab_thread);
+// pthread_join(grab_thread, NULL);
+return 1;
+}
+", strerror(handler_ret));
 	
 	
 	while (1)
